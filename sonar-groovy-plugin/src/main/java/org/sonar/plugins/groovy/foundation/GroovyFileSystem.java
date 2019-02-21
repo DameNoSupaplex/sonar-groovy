@@ -23,14 +23,14 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.CheckForNull;
-import org.sonar.api.batch.BatchSide;
+import org.sonar.api.batch.ScannerSide;
 import org.sonar.api.batch.fs.FilePredicate;
 import org.sonar.api.batch.fs.FilePredicates;
 import org.sonar.api.batch.fs.FileSystem;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.InputFile.Type;
 
-@BatchSide
+@ScannerSide
 public class GroovyFileSystem {
 
   private final FileSystem fileSystem;
@@ -47,13 +47,6 @@ public class GroovyFileSystem {
 
   public boolean hasGroovyFiles() {
     return fileSystem.hasFiles(isGroovyLanguage);
-  }
-
-  public List<File> sourceFiles() {
-    Iterable<File> files = fileSystem.files(predicates.and(isGroovyLanguage, isMainTypeFile));
-    List<File> list = new ArrayList<>();
-    files.iterator().forEachRemaining(list::add);
-    return list;
   }
 
   public List<InputFile> groovyInputFiles() {

@@ -28,10 +28,10 @@ import org.mockito.ArgumentMatchers;
 import org.sonar.api.batch.fs.InputFile.Type;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
-import org.sonar.api.batch.sensor.coverage.CoverageType;
+import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
 import org.sonar.api.batch.sensor.internal.DefaultSensorDescriptor;
 import org.sonar.api.batch.sensor.internal.SensorContextTester;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.scan.filesystem.PathResolver;
 import org.sonar.plugins.groovy.GroovyPlugin;
 import org.sonar.plugins.groovy.TestUtils;
@@ -48,7 +48,7 @@ public class JaCoCoSensorTest {
 
   private File jacocoExecutionData;
   private DefaultInputFile inputFile;
-  private JaCoCoConfiguration configuration;
+  private JaCoCoConfiguration jaCoCoConfiguration;
   private PathResolver pathResolver;
   private JaCoCoSensor sensor;
 
@@ -66,23 +66,24 @@ public class JaCoCoSensorTest {
     FileUtils.copyFile(TestUtils.getResource("/org/sonar/plugins/groovy/jacoco/Hello$InnerClass.class.toCopy"),
       new File(jacocoExecutionData.getParentFile(), "Hello$InnerClass.class"));
 
-    Settings settings = new Settings();
+    MapSettings settings = new MapSettings();
     settings.setProperty(GroovyPlugin.SONAR_GROOVY_BINARIES, ".");
 
-    configuration = mock(JaCoCoConfiguration.class);
-    when(configuration.shouldExecuteOnProject(true)).thenReturn(true);
-    when(configuration.shouldExecuteOnProject(false)).thenReturn(false);
-    when(configuration.getReportPath()).thenReturn(jacocoExecutionData.getPath());
+    jaCoCoConfiguration = mock(JaCoCoConfiguration.class);
+    when(jaCoCoConfiguration.shouldExecuteOnProject(true)).thenReturn(true);
+    when(jaCoCoConfiguration.shouldExecuteOnProject(false)).thenReturn(false);
+    when(jaCoCoConfiguration.getReportPath()).thenReturn(jacocoExecutionData.getPath());
 
     DefaultFileSystem fileSystem = new DefaultFileSystem(jacocoExecutionData.getParentFile());
-    inputFile = new DefaultInputFile("", "example/Hello.groovy")
+    inputFile = new TestInputFileBuilder("", "example/Hello.groovy")
       .setLanguage(Groovy.KEY)
-      .setType(Type.MAIN);
-    inputFile.setLines(50);
+      .setType(Type.MAIN)
+      .setLines(50)
+      .build();
     fileSystem.add(inputFile);
 
     pathResolver = mock(PathResolver.class);
-    sensor = new JaCoCoSensor(configuration, new GroovyFileSystem(fileSystem), pathResolver, settings);
+    sensor = new JaCoCoSensor(jaCoCoConfiguration, new GroovyFileSystem(fileSystem), pathResolver, settings.asConfig());
 
     return jacocoExecutionData;
   }
@@ -96,7 +97,7 @@ public class JaCoCoSensorTest {
 
   @Test
   public void should_Execute_On_Project_only_if_exec_exists() {
-    when(configuration.getReportPath()).thenReturn("ut.exec");
+    when(jaCoCoConfiguration.getReportPath()).thenReturn("ut.exec");
 
     when(pathResolver.relativeFile(any(File.class), eq("ut.exec"))).thenReturn(jacocoExecutionData);
     assertThat(sensor.shouldExecuteOnProject()).isTrue();
@@ -110,7 +111,7 @@ public class JaCoCoSensorTest {
     assertThat(sensor.shouldExecuteOnProject()).isFalse();
 
     when(pathResolver.relativeFile(any(File.class), eq("ut.exec"))).thenReturn(fakeExecFile);
-    when(configuration.shouldExecuteOnProject(false)).thenReturn(true);
+    when(jaCoCoConfiguration.shouldExecuteOnProject(false)).thenReturn(true);
     assertThat(sensor.shouldExecuteOnProject()).isTrue();
   }
 
@@ -142,15 +143,15 @@ public class JaCoCoSensorTest {
     int[] coveredConditions = {2, 1, 0};
 
     for (int zeroHitline : zeroHitlines) {
-      assertThat(context.lineHits(":example/Hello.groovy", CoverageType.UNIT, zeroHitline)).isEqualTo(0);
+      assertThat(context.lineHits(":example/Hello.groovy", zeroHitline)).isEqualTo(0);
     }
     for (int oneHitline : oneHitlines) {
-      assertThat(context.lineHits(":example/Hello.groovy", CoverageType.UNIT, oneHitline)).isEqualTo(1);
+      assertThat(context.lineHits(":example/Hello.groovy", oneHitline)).isEqualTo(1);
     }
     for (int i = 0; i < conditionLines.length; i++) {
       int conditionLine = conditionLines[i];
-      assertThat(context.conditions(":example/Hello.groovy", CoverageType.UNIT, conditionLine)).isEqualTo(2);
-      assertThat(context.coveredConditions(":example/Hello.groovy", CoverageType.UNIT, conditionLine)).isEqualTo(coveredConditions[i]);
+      assertThat(context.conditions(":example/Hello.groovy", conditionLine)).isEqualTo(2);
+      assertThat(context.coveredConditions(":example/Hello.groovy", conditionLine)).isEqualTo(coveredConditions[i]);
     }
   }
 }

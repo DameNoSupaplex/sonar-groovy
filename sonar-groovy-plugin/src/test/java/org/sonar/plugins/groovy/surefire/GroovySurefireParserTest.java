@@ -32,10 +32,11 @@ import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.InputFile.Type;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
+import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
 import org.sonar.api.batch.sensor.SensorContext;
 import org.sonar.api.batch.sensor.internal.SensorContextTester;
 import org.sonar.api.component.ResourcePerspectives;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.measures.CoreMetrics;
 import org.sonar.api.test.MutableTestCase;
 import org.sonar.api.test.MutableTestPlan;
@@ -73,16 +74,16 @@ public class GroovySurefireParserTest {
     perspectives = mock(ResourcePerspectives.class);
     fs = new DefaultFileSystem(new File("."));
 
-    Settings settings = mock(Settings.class);
-    when(settings.getStringArray(GroovyPlugin.FILE_SUFFIXES_KEY)).thenReturn(new String[] {".groovy", "grvy"});
-    groovy = new Groovy(settings);
+    MapSettings settings = new MapSettings();
+    settings.setProperty(GroovyPlugin.FILE_SUFFIXES_KEY, ".groovy,grvy");
+    groovy = new Groovy(settings.asConfig());
 
     parser = spy(new GroovySurefireParser(groovy, perspectives, fs));
 
     doAnswer(new Answer<InputFile>() {
       @Override
       public InputFile answer(InvocationOnMock invocation) throws Throwable {
-        return new DefaultInputFile("", (String) invocation.getArguments()[0]);
+        return new TestInputFileBuilder("", (String) invocation.getArguments()[0]).build();
       }
     }).when(parser).getUnitTestInputFile(anyString());
   }
@@ -214,9 +215,10 @@ public class GroovySurefireParserTest {
   @Test
   public void should_generate_correct_predicate() throws URISyntaxException {
     DefaultFileSystem fs = new DefaultFileSystem(new File("."));
-    DefaultInputFile inputFile = new DefaultInputFile("", "src/test/org/sonar/JavaNCSSCollectorTest.groovy")
+    DefaultInputFile inputFile = new TestInputFileBuilder("", "src/test/org/sonar/JavaNCSSCollectorTest.groovy")
       .setLanguage(Groovy.KEY)
-      .setType(Type.TEST);
+      .setType(Type.TEST)
+      .build();
     fs.add(inputFile);
 
     parser = new GroovySurefireParser(groovy, perspectives, fs);

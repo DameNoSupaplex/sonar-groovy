@@ -20,7 +20,7 @@
 package org.sonar.plugins.groovy.surefire.api;
 
 import org.sonar.api.batch.fs.FileSystem;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.Configuration;
 import org.sonar.api.scan.filesystem.PathResolver;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
@@ -28,6 +28,7 @@ import org.sonar.api.utils.log.Loggers;
 import javax.annotation.CheckForNull;
 
 import java.io.File;
+import java.util.Optional;
 
 public final class SurefireUtils {
 
@@ -37,8 +38,8 @@ public final class SurefireUtils {
   private SurefireUtils() {
   }
 
-  public static File getReportsDirectory(Settings settings, FileSystem fs, PathResolver pathResolver) {
-    File dir = getReportsDirectoryFromProperty(settings, fs, pathResolver);
+  public static File getReportsDirectory(Configuration configuration, FileSystem fs, PathResolver pathResolver) {
+    File dir = getReportsDirectoryFromProperty(configuration, fs, pathResolver);
     if (dir == null) {
       dir = new File(fs.baseDir(), "target/surefire-reports");
     }
@@ -46,9 +47,10 @@ public final class SurefireUtils {
   }
 
   @CheckForNull
-  private static File getReportsDirectoryFromProperty(Settings settings, FileSystem fs, PathResolver pathResolver) {
-    String path = settings.getString(SUREFIRE_REPORTS_PATH_PROPERTY);
-    if (path != null) {
+  private static File getReportsDirectoryFromProperty(Configuration configuration, FileSystem fs, PathResolver pathResolver) {
+    Optional<String> maybePath = configuration.get(SUREFIRE_REPORTS_PATH_PROPERTY);
+    if (maybePath.isPresent()) {
+      String path = maybePath.get();
       try {
         return pathResolver.relativeFile(fs.baseDir(), path);
       } catch (Exception e) {

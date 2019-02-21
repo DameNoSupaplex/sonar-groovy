@@ -149,19 +149,17 @@ public class GroovyHighlighterAndTokenizer {
     new TypeOfTextToTokenTypes(TypeOfText.COMMENT, COMMENTS));
 
   private final InputFile inputFile;
-  private final File file;
   private boolean isAnnotation;
 
   public GroovyHighlighterAndTokenizer(InputFile inputFile) {
     this.inputFile = inputFile;
-    this.file = inputFile.file();
   }
 
   public void processFile(SensorContext context) {
     List<GroovyToken> tokens = new ArrayList<>();
     isAnnotation = false;
 
-    try (InputStreamReader streamReader = new InputStreamReader(new FileInputStream(file), context.fileSystem().encoding())) {
+    try (InputStreamReader streamReader = new InputStreamReader(inputFile.inputStream(), context.fileSystem().encoding())) {
       GroovyLexer groovyLexer = new GroovyLexer(streamReader);
       groovyLexer.setWhitespaceIncluded(true);
       TokenStream tokenStream = groovyLexer.plumb();
@@ -179,9 +177,9 @@ public class GroovyHighlighterAndTokenizer {
         type = token.getType();
       }
     } catch (TokenStreamException e) {
-      LOG.error("Unexpected token when lexing file: " + file.getName(), e);
+      LOG.error("Unexpected token when lexing file: " + inputFile.filename(), e);
     } catch (IOException e) {
-      LOG.error("Unable to read file: " + file.getName(), e);
+      LOG.error("Unable to read file: " + inputFile.filename(), e);
     }
 
     if (!tokens.isEmpty()) {

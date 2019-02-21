@@ -21,14 +21,18 @@ package org.sonar.plugins.groovy.foundation;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.sonar.api.batch.fs.InputFile.Type;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
+import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
 import org.sonar.api.batch.sensor.highlighting.TypeOfText;
 import org.sonar.api.batch.sensor.internal.SensorContextTester;
 import org.sonar.plugins.groovy.TestUtils;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class GroovyHighlighterAndTokenizerTest {
@@ -38,10 +42,12 @@ public class GroovyHighlighterAndTokenizerTest {
     File file = TestUtils.getResource("/org/sonar/plugins/groovy/foundation/Greet.groovy");
 
     SensorContextTester context = SensorContextTester.create(file.getParentFile());
-    DefaultInputFile inputFile = new DefaultInputFile("", "Greet.groovy")
+    DefaultInputFile inputFile = new TestInputFileBuilder("", "Greet.groovy")
       .setLanguage(Groovy.KEY)
       .setType(Type.MAIN)
-      .initMetadata(new String(Files.readAllBytes(file.toPath()), "UTF-8"));
+      .initMetadata(new String(Files.readAllBytes(file.toPath()), UTF_8))
+      .setModuleBaseDir(context.fileSystem().baseDirPath())
+      .build();
     context.fileSystem().add(inputFile);
 
     GroovyHighlighterAndTokenizer highlighter = new GroovyHighlighterAndTokenizer(inputFile);
@@ -69,10 +75,12 @@ public class GroovyHighlighterAndTokenizerTest {
     File file = TestUtils.getResource("/org/sonar/plugins/groovy/foundation/Greet.groovy");
 
     SensorContextTester context = SensorContextTester.create(file.getParentFile());
-    DefaultInputFile inputFile = new DefaultInputFile("", "Greet.groovy")
+    DefaultInputFile inputFile = new TestInputFileBuilder("", "Greet.groovy")
       .setLanguage(Groovy.KEY)
       .setType(Type.MAIN)
-      .initMetadata(new String(Files.readAllBytes(file.toPath()), "UTF-8"));
+      .initMetadata(new String(Files.readAllBytes(file.toPath()), UTF_8))
+      .setModuleBaseDir(context.fileSystem().baseDirPath())
+      .build();
     context.fileSystem().add(inputFile);
 
     GroovyHighlighterAndTokenizer highlighter = new GroovyHighlighterAndTokenizer(inputFile);
@@ -97,9 +105,11 @@ public class GroovyHighlighterAndTokenizerTest {
     File file = TestUtils.getResource("/org/sonar/plugins/groovy/foundation/Greet.groovy");
 
     SensorContextTester context = SensorContextTester.create(file.getParentFile());
-    DefaultInputFile inputFile = new DefaultInputFile("", "Greet-fake.groovy")
+    DefaultInputFile inputFile = new TestInputFileBuilder("", "Greet-fake.groovy")
       .setLanguage(Groovy.KEY)
-      .setType(Type.MAIN);
+      .setType(Type.MAIN)
+      .setModuleBaseDir(context.fileSystem().baseDirPath())
+      .build();
     context.fileSystem().add(inputFile);
 
     GroovyHighlighterAndTokenizer highlighter = new GroovyHighlighterAndTokenizer(inputFile);
@@ -115,10 +125,12 @@ public class GroovyHighlighterAndTokenizerTest {
     File file = TestUtils.getResource("/org/sonar/plugins/groovy/foundation/Error.groovy");
 
     SensorContextTester context = SensorContextTester.create(file.getParentFile());
-    DefaultInputFile inputFile = new DefaultInputFile("", "Error.groovy")
+    DefaultInputFile inputFile = new TestInputFileBuilder("", "Error.groovy")
       .setLanguage(Groovy.KEY)
       .setType(Type.MAIN)
-      .initMetadata(new String(Files.readAllBytes(file.toPath()), "UTF-8"));
+      .initMetadata(new String(Files.readAllBytes(file.toPath()), UTF_8))
+      .setModuleBaseDir(context.fileSystem().baseDirPath())
+      .build();
     context.fileSystem().add(inputFile);
 
     GroovyHighlighterAndTokenizer highlighter = new GroovyHighlighterAndTokenizer(inputFile);

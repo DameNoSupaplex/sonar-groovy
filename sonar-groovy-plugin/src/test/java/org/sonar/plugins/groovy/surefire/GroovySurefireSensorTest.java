@@ -26,11 +26,12 @@ import org.mockito.stubbing.Answer;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
+import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
 import org.sonar.api.batch.sensor.SensorContext;
 import org.sonar.api.batch.sensor.internal.DefaultSensorDescriptor;
 import org.sonar.api.batch.sensor.internal.SensorContextTester;
 import org.sonar.api.component.ResourcePerspectives;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.measures.CoreMetrics;
 import org.sonar.api.scan.filesystem.PathResolver;
 import org.sonar.plugins.groovy.GroovyPlugin;
@@ -62,16 +63,17 @@ public class GroovySurefireSensorTest {
   @Before
   public void before() {
     fs = new DefaultFileSystem(new File("."));
-    DefaultInputFile groovyFile = new DefaultInputFile("", "src/org/foo/grvy");
-    groovyFile.setLanguage(Groovy.KEY);
+    DefaultInputFile groovyFile = new TestInputFileBuilder("", "src/org/foo/grvy")
+      .setLanguage(Groovy.KEY)
+      .build();
     fs.add(groovyFile);
     perspectives = mock(ResourcePerspectives.class);
 
     context = mock(SensorContext.class);
 
-    Settings settings = mock(Settings.class);
-    when(settings.getStringArray(GroovyPlugin.FILE_SUFFIXES_KEY)).thenReturn(new String[] {".groovy", "grvy"});
-    groovy = new Groovy(settings);
+    MapSettings settings = new MapSettings();
+    settings.setProperty(GroovyPlugin.FILE_SUFFIXES_KEY, ".groovy,grvy");
+    groovy = new Groovy(settings.asConfig());
 
     GroovySurefireParser parser = spy(new GroovySurefireParser(groovy, perspectives, fs));
 
@@ -82,12 +84,12 @@ public class GroovySurefireSensorTest {
       }
     }).when(parser).getUnitTestInputFile(anyString());
 
-    surefireSensor = new GroovySurefireSensor(parser, mock(Settings.class), fs, pathResolver);
+    surefireSensor = new GroovySurefireSensor(parser, new MapSettings().asConfig(), fs, pathResolver);
   }
 
   @Test
   public void test_description() {
-    surefireSensor = new GroovySurefireSensor(new GroovySurefireParser(groovy, perspectives, fs), mock(Settings.class), fs, pathResolver);
+    surefireSensor = new GroovySurefireSensor(new GroovySurefireParser(groovy, perspectives, fs), new MapSettings().asConfig(), fs, pathResolver);
     DefaultSensorDescriptor defaultSensorDescriptor = new DefaultSensorDescriptor();
     surefireSensor.describe(defaultSensorDescriptor);
     assertThat(defaultSensorDescriptor.languages()).containsOnly(Groovy.KEY);
@@ -95,10 +97,10 @@ public class GroovySurefireSensorTest {
 
   @Test
   public void shouldNotFailIfReportsNotFound() {
-    Settings settings = mock(Settings.class);
-    when(settings.getString(SurefireUtils.SUREFIRE_REPORTS_PATH_PROPERTY)).thenReturn("unknown");
+    MapSettings settings = new MapSettings();
+    settings.setProperty(SurefireUtils.SUREFIRE_REPORTS_PATH_PROPERTY, "unknown");
 
-    GroovySurefireSensor surefireSensor = new GroovySurefireSensor(mock(GroovySurefireParser.class), settings, fs, pathResolver);
+    GroovySurefireSensor surefireSensor = new GroovySurefireSensor(mock(GroovySurefireParser.class), settings.asConfig(), fs, pathResolver);
     surefireSensor.execute(mock(SensorContext.class));
   }
 
@@ -137,7 +139,7 @@ public class GroovySurefireSensorTest {
   }
 
   private static DefaultInputFile inputFile(String key) {
-    return new DefaultInputFile("", key).setType(InputFile.Type.TEST);
+    return new TestInputFileBuilder("", key).setType(InputFile.Type.TEST).build();
   }
 
   @Test

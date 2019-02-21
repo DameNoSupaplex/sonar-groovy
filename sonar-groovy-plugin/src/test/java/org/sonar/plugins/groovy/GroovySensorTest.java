@@ -25,9 +25,10 @@ import org.mockito.Mockito;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
 import org.sonar.api.batch.fs.internal.DefaultInputDir;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
+import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
 import org.sonar.api.batch.sensor.internal.DefaultSensorDescriptor;
 import org.sonar.api.batch.sensor.internal.SensorContextTester;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.measures.CoreMetrics;
 import org.sonar.api.measures.FileLinesContext;
 import org.sonar.api.measures.FileLinesContextFactory;
@@ -37,6 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -44,16 +46,16 @@ import static org.mockito.Mockito.when;
 
 public class GroovySensorTest {
 
-  private Settings settings = new Settings();
+  private MapSettings settings = new MapSettings();
   private FileLinesContextFactory fileLinesContextFactory = mock(FileLinesContextFactory.class);
   private DefaultFileSystem fileSystem = new DefaultFileSystem(new File("."));
-  private GroovySensor sensor = new GroovySensor(settings, fileLinesContextFactory, fileSystem);
+  private GroovySensor sensor = new GroovySensor(settings.asConfig(), fileLinesContextFactory, fileSystem);
 
   @Test
   public void do_nothing_when_no_groovy_file() throws IOException {
     SensorContextTester context = SensorContextTester.create(new File(""));
     context = Mockito.spy(context);
-    sensor = new GroovySensor(settings, fileLinesContextFactory, context.fileSystem());
+    sensor = new GroovySensor(settings.asConfig(), fileLinesContextFactory, context.fileSystem());
     sensor.execute(context);
 
     Mockito.verify(context, Mockito.never()).newHighlighting();
@@ -72,21 +74,22 @@ public class GroovySensorTest {
   private void testMetrics(boolean headerComment, int expectedCommentMetric) throws IOException {
     settings.appendProperty(GroovyPlugin.IGNORE_HEADER_COMMENTS, "" + headerComment);
     File sourceDir = new File("src/test/resources/org/sonar/plugins/groovy/gmetrics");
-    SensorContextTester context = SensorContextTester.create(new File(""));
+    SensorContextTester context = SensorContextTester.create(new File("").getAbsoluteFile());
 
     File sourceFile = new File(sourceDir, "Greeting.groovy");
     fileSystem = context.fileSystem();
     fileSystem.add(new DefaultInputDir("", sourceDir.getPath()));
-    DefaultInputFile groovyFile = new DefaultInputFile("", sourceFile.getPath())
+    DefaultInputFile groovyFile = new TestInputFileBuilder("", sourceFile.getPath())
       .setLanguage(Groovy.KEY)
-      .initMetadata(new String(Files.readAllBytes(sourceFile.toPath()), "UTF-8"));
+      .initMetadata(new String(Files.readAllBytes(sourceFile.toPath()), UTF_8))
+      .build();
     fileSystem.add(groovyFile);
-    fileSystem.add(new DefaultInputFile("", "unknownFile.groovy").setLanguage(Groovy.KEY));
+    fileSystem.add(new TestInputFileBuilder("", "unknownFile.groovy").setLanguage(Groovy.KEY).build());
 
     FileLinesContext fileLinesContext = mock(FileLinesContext.class);
     when(fileLinesContextFactory.createFor(any(DefaultInputFile.class))).thenReturn(fileLinesContext);
 
-    sensor = new GroovySensor(settings, fileLinesContextFactory, fileSystem);
+    sensor = new GroovySensor(settings.asConfig(), fileLinesContextFactory, fileSystem);
     sensor.execute(context);
 
     String key = groovyFile.key();
@@ -116,7 +119,7 @@ public class GroovySensorTest {
 
   @Test
   public void compute_coupling_metrics() throws IOException {
-    SensorContextTester context = SensorContextTester.create(new File(""));
+    SensorContextTester context = SensorContextTester.create(new File("").getAbsoluteFile());
 
     fileSystem = context.fileSystem();
     // package 'org' contains class 'Greeting', used by no other class, but using classes 'Bar' and 'Foo'
@@ -129,7 +132,7 @@ public class GroovySensorTest {
     FileLinesContext fileLinesContext = mock(FileLinesContext.class);
     when(fileLinesContextFactory.createFor(any(DefaultInputFile.class))).thenReturn(fileLinesContext);
 
-    sensor = new GroovySensor(settings, fileLinesContextFactory, fileSystem);
+    sensor = new GroovySensor(settings.asConfig(), fileLinesContextFactory, fileSystem);
     sensor.execute(context);
 
     assertCouplingMeasureAre(context, org.key(), 3, 1.0, 3, 1.0);
@@ -150,9 +153,10 @@ public class GroovySensorTest {
     File file = new File(dir, fileName);
     DefaultInputDir inputDir = new DefaultInputDir("", dir.getPath());
     fileSystem.add(inputDir);
-    fileSystem.add(new DefaultInputFile("", file.getPath())
+    fileSystem.add(new TestInputFileBuilder("", file.getPath())
       .setLanguage(Groovy.KEY)
-      .initMetadata(new String(Files.readAllBytes(file.toPath()), "UTF-8")));
+      .initMetadata(new String(Files.readAllBytes(file.toPath()), UTF_8))
+      .build());
     return inputDir;
   }
 

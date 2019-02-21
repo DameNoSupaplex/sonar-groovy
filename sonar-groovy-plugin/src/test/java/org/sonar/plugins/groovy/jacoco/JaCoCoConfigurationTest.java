@@ -22,9 +22,9 @@ package org.sonar.plugins.groovy.jacoco;
 import org.junit.Before;
 import org.junit.Test;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
-import org.sonar.api.batch.fs.internal.DefaultInputFile;
+import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
 import org.sonar.api.config.PropertyDefinitions;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.plugins.groovy.foundation.Groovy;
 
 import java.io.File;
@@ -33,51 +33,51 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class JaCoCoConfigurationTest {
 
-  private Settings settings;
-  private JaCoCoConfiguration jacocoSettings;
+  private MapSettings settings;
+  private JaCoCoConfiguration jaCoCoConfiguration;
   private DefaultFileSystem fileSystem;
 
   @Before
   public void setUp() {
-    settings = new Settings(new PropertyDefinitions().addComponents(JaCoCoConfiguration.getPropertyDefinitions()));
+    settings = new MapSettings(new PropertyDefinitions().addComponents(JaCoCoConfiguration.getPropertyDefinitions()));
     fileSystem = new DefaultFileSystem(new File("."));
-    jacocoSettings = new JaCoCoConfiguration(settings, fileSystem);
+    jaCoCoConfiguration = new JaCoCoConfiguration(settings.asConfig(), fileSystem);
   }
 
   @Test
   public void shouldExecuteOnProject() throws Exception {
     // no files
-    assertThat(jacocoSettings.shouldExecuteOnProject(true)).isFalse();
-    assertThat(jacocoSettings.shouldExecuteOnProject(false)).isFalse();
+    assertThat(jaCoCoConfiguration.shouldExecuteOnProject(true)).isFalse();
+    assertThat(jaCoCoConfiguration.shouldExecuteOnProject(false)).isFalse();
 
-    fileSystem.add(new DefaultInputFile("", "src/foo/bar.java").setLanguage("java"));
-    assertThat(jacocoSettings.shouldExecuteOnProject(true)).isFalse();
-    assertThat(jacocoSettings.shouldExecuteOnProject(false)).isFalse();
+    fileSystem.add(new TestInputFileBuilder("", "src/foo/bar.java").setLanguage("java").build());
+    assertThat(jaCoCoConfiguration.shouldExecuteOnProject(true)).isFalse();
+    assertThat(jaCoCoConfiguration.shouldExecuteOnProject(false)).isFalse();
 
-    fileSystem.add(new DefaultInputFile("", "src/foo/bar.groovy").setLanguage(Groovy.KEY));
-    assertThat(jacocoSettings.shouldExecuteOnProject(true)).isTrue();
-    assertThat(jacocoSettings.shouldExecuteOnProject(false)).isFalse();
+    fileSystem.add(new TestInputFileBuilder("", "src/foo/bar.groovy").setLanguage(Groovy.KEY).build());
+    assertThat(jaCoCoConfiguration.shouldExecuteOnProject(true)).isTrue();
+    assertThat(jaCoCoConfiguration.shouldExecuteOnProject(false)).isFalse();
 
     settings.setProperty(JaCoCoConfiguration.REPORT_MISSING_FORCE_ZERO, true);
-    assertThat(jacocoSettings.shouldExecuteOnProject(true)).isTrue();
-    assertThat(jacocoSettings.shouldExecuteOnProject(false)).isTrue();
+    assertThat(jaCoCoConfiguration.shouldExecuteOnProject(true)).isTrue();
+    assertThat(jaCoCoConfiguration.shouldExecuteOnProject(false)).isTrue();
   }
 
   @Test
   public void defaults() {
-    assertThat(jacocoSettings.getReportPath()).isEqualTo("target/jacoco.exec");
-    assertThat(jacocoSettings.getItReportPath()).isEqualTo("target/jacoco-it.exec");
+    assertThat(jaCoCoConfiguration.getReportPath()).isEqualTo("target/jacoco.exec");
+    assertThat(jaCoCoConfiguration.getItReportPath()).isEqualTo("target/jacoco-it.exec");
   }
 
   @Test
   public void shouldReturnItReportPathWhenModified() {
     settings.setProperty(JaCoCoConfiguration.IT_REPORT_PATH_PROPERTY, "target/it-jacoco-test.exec");
-    assertThat(jacocoSettings.getItReportPath()).isEqualTo("target/it-jacoco-test.exec");
+    assertThat(jaCoCoConfiguration.getItReportPath()).isEqualTo("target/it-jacoco-test.exec");
   }
 
   @Test
   public void shouldReturnReportPathWhenModified() {
     settings.setProperty(JaCoCoConfiguration.REPORT_PATH_PROPERTY, "jacoco.exec");
-    assertThat(jacocoSettings.getReportPath()).isEqualTo("jacoco.exec");
+    assertThat(jaCoCoConfiguration.getReportPath()).isEqualTo("jacoco.exec");
   }
 }
